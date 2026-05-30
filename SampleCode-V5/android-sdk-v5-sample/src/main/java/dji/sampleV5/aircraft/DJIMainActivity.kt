@@ -23,14 +23,41 @@ import dji.v5.utils.common.PermissionUtil
 import dji.v5.utils.common.StringUtils
 import io.reactivex.rxjava3.disposables.CompositeDisposable
 
-/**
- * Class Description
- *
- * @author Hoker
- * @date 2022/2/10
- *
- * Copyright (c) 2022, DJI All Rights Reserved.
- */
+###GROK NEW
+// Add imports
+import dji.sdk.flightcontroller.FlightController
+import dji.sdk.mission.followme.FollowMeMission
+import android.speech.RecognitionListener
+import android.speech.SpeechRecognizer
+import android.speech.tts.TextToSpeech
+
+// In onAircraftConnected()
+val flightController = aircraft.flightController
+val followMission = FollowMeMission.createInstance().apply {
+    followMeMode = FollowMeMission.FollowMeMode.RELATIVE
+    distance = 5f  // meters behind you
+}
+flightController.startMission(followMission) { /* handle result */ }
+
+// Update target location every 2s from phone GPS
+val userLocation = getUserGPS()  // implement with LocationManager
+followMission.updateTargetLocation(userLocation)
+
+// Interaction: voice commands
+val speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
+speechRecognizer.setRecognitionListener(object : RecognitionListener {
+    override fun onResults(results: Bundle?) {
+        val cmd = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.get(0)
+        if (cmd?.contains("follow") == true) flightController.startMission(followMission)
+        if (cmd?.contains("hover") == true) flightController.cancelMission()
+        if (cmd?.contains("photo") == true) aircraft.camera.startShootPhoto()
+        // Add TTS response: "Following you now"
+    }
+})
+speechRecognizer.startListening(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH))
+
+ ### GROK NEW
+
 abstract class DJIMainActivity : AppCompatActivity() {
 
     val tag: String = LogUtils.getTag(this)
